@@ -6,18 +6,27 @@ import {
     Paper,
     Tooltip,
     Fade,
+    Menu,
+    MenuItem,
+    ListItemIcon,
+    ListItemText,
 } from '@mui/material';
 import {
     Send as SendIcon,
-    EmojiEmotions as EmojiIcon,
     AttachFile as AttachFileIcon,
+    Gif as GifIcon,
+    MoreVert as MoreVertIcon,
 } from '@mui/icons-material';
 import { useSocketContext } from '../../context/SocketContext';
+import CustomEmojiPicker from './EmojiPicker';
+import FileUpload from './FileUpload';
 import toast from 'react-hot-toast';
 
 const MessageInput = ({ onSendMessage, disabled }) => {
     const [message, setMessage] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+    const [fileUploadOpen, setFileUploadOpen] = useState(false);
+    const [anchorEl, setAnchorEl] = useState(null);
     const inputRef = useRef(null);
     const typingTimeoutRef = useRef(null);
     const { setTyping } = useSocketContext();
@@ -85,6 +94,31 @@ const MessageInput = ({ onSendMessage, disabled }) => {
         }
     };
 
+    // Handle emoji click
+    const handleEmojiClick = (emoji) => {
+        setMessage(prev => prev + emoji);
+        inputRef.current?.focus();
+    };
+
+    // Handle file upload
+    const handleFileUploaded = (fileData) => {
+        const fileMessage = fileData.type === 'image'
+            ? `📷 Shared an image: ${fileData.originalName}`
+            : `📎 Shared a file: ${fileData.originalName}`;
+
+        onSendMessage(fileMessage, fileData.type, fileData);
+        toast.success('File shared successfully!');
+    };
+
+    // Handle more options menu
+    const handleMoreClick = (event) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleMoreClose = () => {
+        setAnchorEl(null);
+    };
+
     // Cleanup typing timeout on unmount
     useEffect(() => {
         return () => {
@@ -103,113 +137,156 @@ const MessageInput = ({ onSendMessage, disabled }) => {
     }, [disabled, isTyping, setTyping]);
 
     return (
-        <Paper
-            component="form"
-            onSubmit={handleSubmit}
-            elevation={0}
-            sx={{
-                p: 2,
-                borderTop: 1,
-                borderColor: 'divider',
-                bgcolor: 'background.paper',
-            }}
-        >
-            <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-                {/* Emoji Button */}
-                <Tooltip title="Emojis (Coming soon)">
-                    <IconButton
-                        color="primary"
+        <>
+            <Paper
+                component="form"
+                onSubmit={handleSubmit}
+                elevation={0}
+                sx={{
+                    p: 2,
+                    borderTop: 1,
+                    borderColor: 'divider',
+                    bgcolor: 'background.paper',
+                }}
+            >
+                <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+                    {/* Emoji Picker */}
+                    <CustomEmojiPicker
+                        onEmojiClick={handleEmojiClick}
                         disabled={disabled}
-                        sx={{ mb: 0.5 }}
-                    >
-                        <EmojiIcon />
-                    </IconButton>
-                </Tooltip>
+                    />
 
-                {/* Attachment Button */}
-                <Tooltip title="Attach file (Coming soon)">
-                    <IconButton
-                        color="primary"
-                        disabled={disabled}
-                        sx={{ mb: 0.5 }}
-                    >
-                        <AttachFileIcon />
-                    </IconButton>
-                </Tooltip>
-
-                {/* Message Input */}
-                <TextField
-                    ref={inputRef}
-                    fullWidth
-                    multiline
-                    maxRows={4}
-                    placeholder={disabled ? "Connecting..." : "Type a message..."}
-                    value={message}
-                    onChange={handleInputChange}
-                    onKeyPress={handleKeyPress}
-                    disabled={disabled}
-                    variant="outlined"
-                    size="small"
-                    sx={{
-                        '& .MuiOutlinedInput-root': {
-                            borderRadius: 3,
-                            bgcolor: 'background.default',
-                            '& fieldset': {
-                                borderColor: 'divider',
-                            },
-                            '&:hover fieldset': {
-                                borderColor: 'primary.main',
-                            },
-                            '&.Mui-focused fieldset': {
-                                borderColor: 'primary.main',
-                            },
-                        },
-                    }}
-                />
-
-                {/* Send Button */}
-                <Fade in={message.trim().length > 0}>
-                    <Tooltip title="Send message">
+                    {/* Attachment Button */}
+                    <Tooltip title="Attach file">
                         <IconButton
-                            type="submit"
                             color="primary"
-                            disabled={!message.trim() || disabled}
-                            sx={{
-                                mb: 0.5,
-                                bgcolor: 'primary.main',
-                                color: 'white',
-                                '&:hover': {
-                                    bgcolor: 'primary.dark',
-                                },
-                                '&.Mui-disabled': {
-                                    bgcolor: 'action.disabledBackground',
-                                    color: 'action.disabled',
-                                },
-                            }}
+                            disabled={disabled}
+                            onClick={() => setFileUploadOpen(true)}
+                            sx={{ mb: 0.5 }}
                         >
-                            <SendIcon />
+                            <AttachFileIcon />
                         </IconButton>
                     </Tooltip>
-                </Fade>
-            </Box>
 
-            {/* Character Count */}
-            {message.length > 400 && (
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
-                    <Tooltip title="Character limit: 500">
-                        <Box
-                            sx={{
-                                fontSize: '0.75rem',
-                                color: message.length > 500 ? 'error.main' : 'text.secondary',
-                                fontWeight: message.length > 480 ? 'bold' : 'normal',
-                            }}
+                    {/* Message Input */}
+                    <TextField
+                        ref={inputRef}
+                        fullWidth
+                        multiline
+                        maxRows={4}
+                        placeholder={disabled ? "Connecting..." : "Type a message..."}
+                        value={message}
+                        onChange={handleInputChange}
+                        onKeyPress={handleKeyPress}
+                        disabled={disabled}
+                        variant="outlined"
+                        size="small"
+                        sx={{
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: 3,
+                                bgcolor: 'background.default',
+                                '& fieldset': {
+                                    borderColor: 'divider',
+                                },
+                                '&:hover fieldset': {
+                                    borderColor: 'primary.main',
+                                },
+                                '&.Mui-focused fieldset': {
+                                    borderColor: 'primary.main',
+                                },
+                            },
+                        }}
+                    />
+
+                    {/* More Options */}
+                    <Tooltip title="More options">
+                        <IconButton
+                            color="primary"
+                            disabled={disabled}
+                            onClick={handleMoreClick}
+                            sx={{ mb: 0.5 }}
                         >
-                            {message.length}/500
-                        </Box>
+                            <MoreVertIcon />
+                        </IconButton>
                     </Tooltip>
+
+                    {/* Send Button */}
+                    <Fade in={message.trim().length > 0}>
+                        <Tooltip title="Send message">
+                            <IconButton
+                                type="submit"
+                                color="primary"
+                                disabled={!message.trim() || disabled}
+                                sx={{
+                                    mb: 0.5,
+                                    bgcolor: 'primary.main',
+                                    color: 'white',
+                                    '&:hover': {
+                                        bgcolor: 'primary.dark',
+                                    },
+                                    '&.Mui-disabled': {
+                                        bgcolor: 'action.disabledBackground',
+                                        color: 'action.disabled',
+                                    },
+                                }}
+                            >
+                                <SendIcon />
+                            </IconButton>
+                        </Tooltip>
+                    </Fade>
                 </Box>
-            )}
-        </Paper>
+
+                {/* Character Count */}
+                {message.length > 400 && (
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                        <Tooltip title="Character limit: 500">
+                            <Box
+                                sx={{
+                                    fontSize: '0.75rem',
+                                    color: message.length > 500 ? 'error.main' : 'text.secondary',
+                                    fontWeight: message.length > 480 ? 'bold' : 'normal',
+                                }}
+                            >
+                                {message.length}/500
+                            </Box>
+                        </Tooltip>
+                    </Box>
+                )}
+            </Paper>
+
+            {/* More Options Menu */}
+            <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleMoreClose}
+                transformOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                anchorOrigin={{ horizontal: 'right', vertical: 'top' }}
+            >
+                <MenuItem onClick={() => {
+                    setFileUploadOpen(true);
+                    handleMoreClose();
+                }}>
+                    <ListItemIcon>
+                        <AttachFileIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Attach File</ListItemText>
+                </MenuItem>
+
+                <MenuItem onClick={handleMoreClose} disabled>
+                    <ListItemIcon>
+                        <GifIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>GIFs (Coming Soon)</ListItemText>
+                </MenuItem>
+            </Menu>
+
+            {/* File Upload Dialog */}
+            <FileUpload
+                open={fileUploadOpen}
+                onClose={() => setFileUploadOpen(false)}
+                onFileUploaded={handleFileUploaded}
+            />
+        </>
     );
 };
 

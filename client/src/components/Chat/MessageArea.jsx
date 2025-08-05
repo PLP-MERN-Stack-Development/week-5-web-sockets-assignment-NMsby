@@ -7,9 +7,16 @@ import {
     Chip,
     Fade,
     Zoom,
+    IconButton,
+    Tooltip,
 } from '@mui/material';
+import {
+    KeyboardArrowDown as ArrowDownIcon,
+} from '@mui/icons-material';
 import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
 import TypingIndicator from './TypingIndicator';
+import MessageReactions from './MessageReactions';
+import CustomEmojiPicker from './EmojiPicker';
 
 const MessageArea = ({ messages, currentUser, typingUsers }) => {
     const messagesEndRef = useRef(null);
@@ -182,6 +189,7 @@ const MessageArea = ({ messages, currentUser, typingUsers }) => {
                                             alignItems: 'flex-start',
                                             gap: 1,
                                             mb: 2,
+                                            px: 1,
                                         }}
                                     >
                                         <Avatar
@@ -228,12 +236,87 @@ const MessageArea = ({ messages, currentUser, typingUsers }) => {
                                                     borderTopRightRadius: isCurrentUserMessage ? 0.5 : 2,
                                                     maxWidth: '100%',
                                                     wordBreak: 'break-word',
+                                                    position: 'relative',
+                                                    '&:hover .reaction-button': {
+                                                        opacity: 1,
+                                                    },
                                                 }}
                                             >
+                                                {/* File/Image content */}
+                                                {message.fileData && (
+                                                    <Box sx={{ mb: message.message ? 1 : 0 }}>
+                                                        {message.fileData.type === 'image' ? (
+                                                            <img
+                                                                src={`${import.meta.env.VITE_SOCKET_URL}${message.fileData.url}`}
+                                                                alt={message.fileData.originalName}
+                                                                style={{
+                                                                    maxWidth: '100%',
+                                                                    maxHeight: 200,
+                                                                    borderRadius: 8,
+                                                                    cursor: 'pointer',
+                                                                }}
+                                                                onClick={() => {
+                                                                    // Open image in new tab
+                                                                    window.open(`${import.meta.env.VITE_SOCKET_URL}${message.fileData.url}`, '_blank');
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <Box
+                                                                sx={{
+                                                                    p: 2,
+                                                                    border: 1,
+                                                                    borderColor: 'divider',
+                                                                    borderRadius: 1,
+                                                                    bgcolor: isCurrentUserMessage ? 'rgba(255,255,255,0.1)' : 'background.default',
+                                                                    cursor: 'pointer',
+                                                                }}
+                                                                onClick={() => {
+                                                                    // Download file
+                                                                    const link = document.createElement('a');
+                                                                    link.href = `${import.meta.env.VITE_SOCKET_URL}${message.fileData.url}`;
+                                                                    link.download = message.fileData.originalName;
+                                                                    link.click();
+                                                                }}
+                                                            >
+                                                                <Typography variant="body2" color={isCurrentUserMessage ? 'inherit' : 'text.primary'}>
+                                                                    📎 {message.fileData.originalName}
+                                                                </Typography>
+                                                                <Typography variant="caption" color={isCurrentUserMessage ? 'inherit' : 'text.secondary'}>
+                                                                    Click to download
+                                                                </Typography>
+                                                            </Box>
+                                                        )}
+                                                    </Box>
+                                                )}
+
                                                 <Typography variant="body2">
                                                     {message.message}
                                                 </Typography>
+
+                                                {/* Reaction Button */}
+                                                <Box
+                                                    className="reaction-button"
+                                                    sx={{
+                                                        position: 'absolute',
+                                                        top: -12,
+                                                        right: isCurrentUserMessage ? 'auto' : -12,
+                                                        left: isCurrentUserMessage ? -12 : 'auto',
+                                                        opacity: 0,
+                                                        transition: 'opacity 0.2s',
+                                                    }}
+                                                >
+                                                    <CustomEmojiPicker
+                                                        trigger="reaction"
+                                                        onEmojiClick={(emoji) => {
+                                                            // This will be handled by the socket context
+                                                            // The addReaction function will be called automatically
+                                                        }}
+                                                    />
+                                                </Box>
                                             </Paper>
+
+                                            {/* Message Reactions */}
+                                            <MessageReactions message={message} />
 
                                             <Typography
                                                 variant="caption"
@@ -264,29 +347,24 @@ const MessageArea = ({ messages, currentUser, typingUsers }) => {
             {/* Scroll to bottom button */}
             {showScrollButton && (
                 <Zoom in>
-                    <Box
-                        sx={{
-                            position: 'absolute',
-                            bottom: 16,
-                            right: 16,
-                            bgcolor: 'primary.main',
-                            color: 'white',
-                            borderRadius: '50%',
-                            width: 40,
-                            height: 40,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            boxShadow: 2,
-                            '&:hover': {
-                                bgcolor: 'primary.dark',
-                            },
-                        }}
-                        onClick={scrollToBottom}
-                    >
-                        ↓
-                    </Box>
+                    <Tooltip title="Scroll to bottom">
+                        <IconButton
+                            sx={{
+                                position: 'absolute',
+                                bottom: 16,
+                                right: 16,
+                                bgcolor: 'primary.main',
+                                color: 'white',
+                                boxShadow: 2,
+                                '&:hover': {
+                                    bgcolor: 'primary.dark',
+                                },
+                            }}
+                            onClick={scrollToBottom}
+                        >
+                            <ArrowDownIcon />
+                        </IconButton>
+                    </Tooltip>
                 </Zoom>
             )}
         </Box>
